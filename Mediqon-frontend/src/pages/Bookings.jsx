@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Phone, CheckCircle2, LayoutGrid, PlusCircle, Activity, Globe } from "lucide-react";
+import { LayoutGrid, PlusCircle, Globe, Calendar, Clock, CheckCircle2, AlertCircle } from "lucide-react";
 import { api } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
+import { useLanguage } from "../contexts/LanguageContext";
 
 import BookingsDashboard from "../components/BookingsDashboard";
 import SmartBooking from "../components/SmartBooking";
@@ -15,6 +16,7 @@ export default function Bookings() {
   const [activeTab, setActiveTab] = useState("dashboard");
 
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   const fetchAppointments = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -25,7 +27,6 @@ export default function Bookings() {
       setError(null);
     } catch (err) {
       console.error("Failed to fetch appointments:", err);
-      // Fail silently if reloading
       if (!silent) setError("Sync Error: Unable to reach the hospital server.");
     } finally {
       if (!silent) setLoading(false);
@@ -39,14 +40,21 @@ export default function Bookings() {
     window.addEventListener('sync-appointments', onSync);
 
     const interval = setInterval(() => {
-        fetchAppointments(true);
-    }, 3000);
+      fetchAppointments(true);
+    }, 4000);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener('sync-appointments', onSync);
     };
   }, [fetchAppointments]);
+
+  const stats = useMemo(() => {
+    const total = appointments.length;
+    const upcoming = appointments.filter(a => a.status !== 'cancelled' && a.status !== 'completed').length;
+    const completed = appointments.filter(a => a.status === 'completed' || a.status === 'CONFIRMED').length;
+    return { total, upcoming, completed };
+  }, [appointments]);
 
   const handleCancel = async (id) => {
     if (!window.confirm("Confirm cancellation of this appointment?")) return;
@@ -69,80 +77,95 @@ export default function Bookings() {
     }
   };
 
-  const handleBook = async (bookingData) => {
-    const payload = {
-      patientId: user?.id || user?.userId,
-      doctorId: bookingData.doctorId,
-      hospitalId: bookingData.hospitalId,
-      appointmentDate: bookingData.appointmentDate,
-      patient_name: user?.fullName || "Patient",
-      reason: "Consultation",
-    };
-
-    try {
-      if (!payload.patientId) return alert("Please log in.");
-      const response = await api.bookAppointment(payload);
-      if (response) {
-        fetchAppointments(true);
-        setActiveTab("dashboard");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Manual Booking Failed");
-    }
+  const handleBookComplete = () => {
+    fetchAppointments(true);
+    setActiveTab("dashboard");
   };
 
   const handleStartAssistant = () => window.dispatchEvent(new CustomEvent('trigger-vapi'));
 
   return (
-    <div className="w-full max-w-7xl mx-auto flex flex-col gap-8 pb-10 fade-in">
+    <div className="w-full max-w-7xl mx-auto flex flex-col gap-6 pb-10 fade-in">
       
       {/* Header */}
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-border">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-4 border-b border-border">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-            Appointments
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
+            {t('Appointments', 'Appointments')}
           </h1>
-          <p className="text-sm text-muted-foreground mt-2 font-medium">
-            Manage your schedule, book new visits, or check past records.
+          <p className="text-xs text-muted-foreground mt-1.5 font-medium">
+            {t('PatientOverview', 'Manage your schedule, book new visits, or review queue status.')}
           </p>
         </div>
 
         <div className="flex bg-muted p-1 rounded-xl border border-border shadow-inner">
           <button
             onClick={() => setActiveTab("dashboard")}
-            className={`flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-lg transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all ${
               activeTab === "dashboard" 
                 ? "bg-card text-foreground shadow-sm border border-border" 
                 : "text-muted-foreground hover:text-foreground hover:bg-card/50"
             }`}
           >
-            <LayoutGrid className="h-4 w-4" />
-            Overview
+            <LayoutGrid className="h-3.5 w-3.5 text-primary" />
+            {t('Overview', 'Overview')}
           </button>
           <button
             onClick={() => setActiveTab("new")}
-            className={`flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-lg transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all ${
               activeTab === "new" 
-                ? "bg-card text-foreground shadow-sm border border-border" 
+                ? "bg-primary text-primary-foreground shadow-sm" 
                 : "text-muted-foreground hover:text-foreground hover:bg-card/50"
             }`}
           >
-            <PlusCircle className="h-4 w-4" />
-            Book New
+            <PlusCircle className="h-3.5 w-3.5" />
+            {t('BookNew', 'Book New')}
           </button>
         </div>
       </header>
 
+      {/* Quick Summary Badges */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-card border border-border rounded-2xl p-4 flex items-center justify-between shadow-sm">
+          <div>
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">{t('UpcomingVisits', 'Upcoming Visits')}</span>
+            <span className="text-2xl font-black text-foreground mt-0.5 block">{stats.upcoming}</span>
+          </div>
+          <div className="h-10 w-10 bg-primary/10 text-primary border border-primary/20 rounded-xl flex items-center justify-center">
+            <Calendar className="h-5 w-5" />
+          </div>
+        </div>
+
+        <div className="bg-card border border-border rounded-2xl p-4 flex items-center justify-between shadow-sm">
+          <div>
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">{t('TotalScheduled', 'Total Scheduled')}</span>
+            <span className="text-2xl font-black text-foreground mt-0.5 block">{stats.total}</span>
+          </div>
+          <div className="h-10 w-10 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-xl flex items-center justify-center">
+            <CheckCircle2 className="h-5 w-5" />
+          </div>
+        </div>
+
+        <div className="bg-card border border-border rounded-2xl p-4 flex items-center justify-between shadow-sm">
+          <div>
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">{t('LiveQueue', 'Live Queue')}</span>
+            <span className="text-2xl font-black text-primary mt-0.5 block">{stats.upcoming > 0 ? '#003' : '--'}</span>
+          </div>
+          <div className="h-10 w-10 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-xl flex items-center justify-center">
+            <Clock className="h-5 w-5" />
+          </div>
+        </div>
+      </div>
+
       {error && (
-        <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-semibold">
-          <Globe className="h-4 w-4 animate-spin" />
+        <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl flex items-center gap-3 text-xs font-semibold">
+          <Globe className="h-4 w-4 animate-spin shrink-0" />
           {error}
         </div>
       )}
 
       {/* Main Content Pane */}
-      <main className="min-h-[500px] relative">
+      <main className="min-h-[450px] relative">
         <AnimatePresence mode="wait">
           {activeTab === "dashboard" ? (
             <motion.section
@@ -156,7 +179,7 @@ export default function Bookings() {
               key="new"
               initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.99 }} transition={{ duration: 0.2 }}
             >
-              <SmartBooking onBook={handleBook} onStartAssistant={handleStartAssistant} />
+              <SmartBooking onBook={handleBookComplete} onStartAssistant={handleStartAssistant} />
             </motion.section>
           )}
         </AnimatePresence>

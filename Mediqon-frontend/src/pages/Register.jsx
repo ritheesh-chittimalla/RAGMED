@@ -29,7 +29,8 @@ export default function Register() {
       await API.post("/auth/register", form);
       navigate("/login");
     } catch (err) {
-      setError(err.response?.data?.message || "Registration failed. Try again.");
+      const msg = err.response?.data?.message;
+      setError(Array.isArray(msg) ? msg.join('. ') : msg || "Registration failed. Try again.");
     } finally {
       setLoading(false);
     }
@@ -123,9 +124,10 @@ export default function Register() {
                     <input
                       name="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
+                      placeholder="Min 8 characters"
                       value={form.password}
                       onChange={handleChange}
+                      minLength={8}
                       required
                       className="w-full bg-muted border border-border text-foreground rounded-xl py-3 pl-11 pr-11 text-sm outline-none focus:border-primary/30 focus:bg-muted/80 transition-all"
                     />

@@ -3,14 +3,15 @@ import { Search, MapPin, Clock, ArrowRight, ShieldCheck, Star, X, Loader2, Calen
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
-import DatePicker from 'react-datepicker';
-import "react-datepicker/dist/react-datepicker.css";
+import { useLocationContext } from '../contexts/LocationContext';
 import { useSearchParams } from 'react-router-dom';
+import BookingModal from '../components/ui/BookingModal';
 
 const SPECIALTIES = ['All', 'Neurologist', 'Cardiologist', 'Oncologist', 'Psychiatrist', 'Radiologist', 'Gastroenterologist', 'Dermatologist', 'Orthopedic Surgeon', 'Pediatrician'];
 
 export default function Doctors() {
   const { user } = useAuth();
+  const { cityDoctors, currentCity } = useLocationContext();
   const [searchParams] = useSearchParams();
   const initialSearch = searchParams.get('q') || '';
   
@@ -20,182 +21,36 @@ export default function Doctors() {
   const [selectedSpecialty, setSelectedSpecialty] = useState('All');
   
   const [selectedDoctor, setSelectedDoctor] = useState(null);
-  const [bookingDate, setBookingDate] = useState(new Date());
-  const [availableSlots, setAvailableSlots] = useState([]);
-  const [selectedSlot, setSelectedSlot] = useState(null);
-  const [bookingLoading, setBookingLoading] = useState(false);
-  const [slotsLoading, setSlotsLoading] = useState(false);
 
   useEffect(() => {
     const fetchDoctors = async () => {
+      setLoading(true);
       try {
         const data = await api.getDoctors();
-        // Advanced High-Fidelity Mock Registry
-        const clinicalMocks = [
-          { 
-            id: 'mock-1', 
-            fullName: 'Dr. Alistair Vance', 
-            specialty: 'Senior Neurologist', 
-            hospital: 'Central Neuro-Diagnostic Center', 
-            experienceYears: 18, 
-            fee: 1500, 
-            rating: 4.95,
-            image: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=600&h=600',
-            tags: ['Neuro-Pathology', 'Board Certified'],
-            bio: 'Expert in neuro-pathology with over 150 successful diagnostics in complex neurology.',
-            certifications: ['Board Certified', 'PhD Neuro-Science']
-          },
-          { 
-            id: 'mock-2', 
-            fullName: 'Dr. Sarah Ishii', 
-            specialty: 'Lead Cardiologist', 
-            hospital: 'Royal Heart Institute', 
-            experienceYears: 14, 
-            fee: 1200, 
-            rating: 4.88,
-            image: 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&q=80&w=600&h=600',
-            tags: ['Interventional', 'Paradiagnostic'],
-            bio: 'Specializing in genomic-integrated cardiac health and cardiovascular performance.',
-            certifications: ['Fellowship ACP', 'MD Cardiology']
-          },
-          { 
-            id: 'mock-3', 
-            fullName: 'Dr. Marcus Thorne', 
-            specialty: 'Orthopedic Surgeon', 
-            hospital: 'Nexus Surgical Hospital', 
-            experienceYears: 22, 
-            fee: 2500, 
-            rating: 4.92,
-            image: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=600&h=600',
-            tags: ['Joint Reconstruction', 'Trauma'],
-            bio: 'Leading surgeon for advanced skeletal-reconstruction and cellular joint therapy.',
-            certifications: ['Board Certified', 'Surgical Pioneer Award']
-          },
-          { 
-            id: 'mock-4', 
-            fullName: 'Dr. Priya Sharma', 
-            specialty: 'Clinical Oncologist', 
-            hospital: 'Apex Cancer Research Center', 
-            experienceYears: 16, 
-            fee: 2200, 
-            rating: 4.96,
-            image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=600&h=600',
-            tags: ['Chemotherapy', 'Nuclear Medicine'],
-            bio: 'Board-certified specialist in integrative oncology and nuclear-diagnostic paradigms.',
-            certifications: ['Medical Gold Medalist', 'Oncology Fellow']
-          },
-          { 
-            id: 'mock-5', 
-            fullName: 'Dr. Arjun Kulkarni', 
-            specialty: 'Consultant Psychiatrist', 
-            hospital: 'Modern Mind & Wellness', 
-            experienceYears: 12, 
-            fee: 1800, 
-            rating: 4.91,
-            image: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&q=80&w=600&h=600',
-            tags: ['Neuro-Psychiatry', 'Counseling'],
-            bio: 'Dedicated to precision-based mental health diagnostics and cognitive behavioral therapy.',
-            certifications: ['MD Psychiatry', 'Clinical Psychologist']
-          },
-          { 
-            id: 'mock-6', 
-            fullName: 'Dr. Elena Rossi', 
-            specialty: 'Senior Radiologist', 
-            hospital: 'Global Diagnostics Hub', 
-            experienceYears: 19, 
-            fee: 1400, 
-            rating: 4.87,
-            image: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?auto=format&fit=crop&q=80&w=600&h=600',
-            tags: ['Advanced MRI', 'CT Diagnostics'],
-            bio: 'Specialist in high-resolution image-based diagnostic screening and neuro-imaging.',
-            certifications: ['PhD Radiology', 'Fellowship Imaging']
-          },
-        ];
-        // Professional clinical fallback registry
-        const medicalAvatars = [
-          'https://images.unsplash.com/photo-1559839734-2b71ea197ec2',
-          'https://images.unsplash.com/photo-1622253692010-333f2da6031d',
-          'https://images.unsplash.com/photo-1594824476967-48c8b964273f',
-          'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d',
-          'https://images.unsplash.com/photo-1537368910025-700350fe46c7',
-          'https://images.unsplash.com/photo-1582750433449-648ed127bb54'
-        ];
-        
-        const finalDoctors = [...(data || []), ...clinicalMocks].map((doc, idx) => {
-           // Professional fallback narratives for authentic feel
-           const clinicalBios = [
-              "Senior consultant focusing on acute neuro-pathological diagnostics and surgical intervention.",
-              "Specialist in integrative cardiac protocols and genomic heart-health performance diagnostic.",
-              "Authorized surgical expert for joint-reconstruction and advanced orthotic rehabilitation.",
-              "Primary neonatal consultant for high-precision pediatric care and developmental diagnostics.",
-              "Diagnostic psychiatrist specializing in neuro-behavioral therapy and cognitive protocols.",
-              "Lead oncologist focusing on integrative cancer screening and nuclear medical paradigms.",
-              "Expert dermatologist specializing in surgical skin-grafting and clinical aesthetic diagnostics."
-           ];
+        const merged = (data && data.length > 0) ? [...cityDoctors, ...data] : cityDoctors;
 
+        const finalDoctors = merged.map((doc, idx) => {
            return {
               ...doc,
-              image: doc.image || `${medicalAvatars[idx % medicalAvatars.length]}?auto=format&fit=crop&q=80&w=600&h=600`,
-              fee: doc.fee || (1000 + (idx * 200)), // Hand-calibrated local fee mock
-              experienceYears: doc.experienceYears || (10 + (idx % 15)), // Varied experience metrics
-              bio: doc.bio || clinicalBios[idx % clinicalBios.length], // Unique professional narratives
-              specialty: doc.specialty || (SPECIALTIES[1 + (idx % (SPECIALTIES.length - 1))]) // Diverse clinical roles
+              fullName: doc.fullName || doc.name,
+              image: doc.image || doc.photo || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(doc.fullName || doc.name || 'Doctor')}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`,
+              fee: doc.fee || 1500,
+              experienceYears: doc.experienceYears || doc.experience || 15,
+              bio: doc.bio || 'Authorized board-certified clinical consultant focusing on precision patient diagnostics and integrative medicine.',
+              specialty: doc.specialty || doc.specialization || 'Diagnostic Specialist'
            };
         });
         setDoctors(finalDoctors);
       } catch (err) {
-        console.error('Failed to synchronize clinician registry:', err);
+        setDoctors(cityDoctors);
       } finally {
         setLoading(false);
       }
     };
     fetchDoctors();
-  }, []);
+  }, [cityDoctors]);
 
-  useEffect(() => {
-    if (selectedDoctor && bookingDate) {
-      fetchSlots();
-    }
-  }, [selectedDoctor, bookingDate]);
 
-  const fetchSlots = async () => {
-    setSlotsLoading(true);
-    try {
-      const formattedDate = bookingDate.toISOString().split('T')[0];
-      const { slots } = await api.getAvailability(selectedDoctor.id, formattedDate);
-      setAvailableSlots(slots || []);
-      setSelectedSlot(null);
-    } catch (err) {
-      console.error(err);
-      setAvailableSlots([]);
-    } finally {
-      setSlotsLoading(false);
-    }
-  };
-
-  const handleBook = async () => {
-    if (!selectedSlot || !selectedDoctor) return;
-    setBookingLoading(true);
-    try {
-      const payload = {
-        patientId: user?.id || user?.userId,
-        doctorId: selectedDoctor.id,
-        hospitalId: selectedDoctor.hospital?.id || selectedDoctor.hospitalId,
-        appointmentDate: bookingDate.toISOString().split('T')[0],
-        patient_name: user?.fullName || "Patient",
-        reason: "Consultation",
-        expectedStartTime: selectedSlot
-      };
-      await api.bookAppointment(payload);
-      alert('Appointment booked successfully!');
-      setSelectedDoctor(null);
-    } catch (err) {
-      console.error(err);
-      alert('Booking failed. Please try again.');
-    } finally {
-      setBookingLoading(false);
-    }
-  };
 
   const filteredDoctors = useMemo(() => {
     return doctors.filter(doc => 
@@ -375,115 +230,15 @@ export default function Doctors() {
         </div>
       </section>
 
-      {/* Booking Modal */}
-      <AnimatePresence>
-        {selectedDoctor && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedDoctor(null)} />
-            <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} className="relative w-full max-w-lg bg-card border border-border rounded-2xl overflow-hidden shadow-2xl">
-              <div className="p-8">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20 shadow-sm">
-                      <CalendarIcon size={18} />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-bold text-foreground uppercase tracking-tight">Booking Appointment</h3>
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">Secure clinical session</p>
-                    </div>
-                  </div>
-                  <button onClick={() => setSelectedDoctor(null)} className="h-9 w-9 rounded-xl bg-muted border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-all">
-                    <X size={18} />
-                  </button>
-                </div>
-
-                <div className="space-y-10">
-                  <div className="premium-datepicker flex justify-center">
-                      <DatePicker 
-                        selected={bookingDate} 
-                        onChange={(date) => setBookingDate(date)} 
-                        inline 
-                        minDate={new Date()} 
-                        calendarClassName="premium-calendar-root"
-                      />
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between px-1">
-                      <p className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">Select Available Time</p>
-                      <span className="text-[10px] font-bold text-primary uppercase tracking-tighter bg-primary/10 px-2 py-0.5 rounded-md">Live availability</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2.5 max-h-[160px] overflow-y-auto pr-1 custom-scrollbar">
-                      {slotsLoading ? (
-                        <div className="col-span-3 flex justify-center py-6">
-                          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                        </div>
-                      ) : availableSlots.length === 0 ? (
-                        <p className="col-span-3 text-center py-6 text-[10px] text-muted-foreground font-bold uppercase tracking-widest">No slots available</p>
-                      ) : (
-                        availableSlots.map(slot => (
-                          <button
-                            key={slot}
-                            onClick={() => setSelectedSlot(slot)}
-                            className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-tight transition-all border ${
-                              selectedSlot === slot 
-                                ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20 scale-[1.02]' 
-                                : 'bg-muted border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground/30 active:scale-95'
-                            }`}
-                          >
-                            {slot}
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-4 pt-4 border-t border-border/50">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Appointment Summary</p>
-                      {selectedSlot && (
-                        <div className="flex items-center gap-1.5 text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md">
-                          <CheckCircle2 size={10} />
-                          <span className="text-[9px] font-bold uppercase">Ready to sync</span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="bg-muted/50 rounded-2xl p-4 border border-border/50">
-                        {selectedSlot ? (
-                            <div className="flex items-center justify-between">
-                                <div className="space-y-1">
-                                    <p className="text-[11px] font-bold text-foreground uppercase tracking-tight">{bookingDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
-                                    <p className="text-[10px] font-medium text-muted-foreground uppercase italic tracking-tighter">Scheduled for {selectedSlot}</p>
-                                </div>
-                                <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
-                                    <Clock size={16} />
-                                </div>
-                            </div>
-                        ) : (
-                            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest text-center py-2 italic opacity-50">Please select a time slot to continue</p>
-                        )}
-                    </div>
-                  </div>
-
-                  <button 
-                    disabled={!selectedSlot || bookingLoading}
-                    onClick={handleBook}
-                    className="w-full bg-primary text-primary-foreground py-4.5 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-xl shadow-primary/10 mt-2 active:scale-[0.98]"
-                  >
-                    {bookingLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
-                      <>
-                        Confirm Consultation
-                        <ArrowRight size={14} className="opacity-50" />
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {/* Unified Quick Booking Modal */}
+      <BookingModal
+        isOpen={Boolean(selectedDoctor)}
+        onClose={() => setSelectedDoctor(null)}
+        doctor={selectedDoctor}
+        onBookSuccess={() => {
+          setSelectedDoctor(null);
+        }}
+      />
     </div>
   );
 }

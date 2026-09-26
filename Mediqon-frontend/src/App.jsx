@@ -5,7 +5,10 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider, RequireAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { LanguageProvider } from './contexts/LanguageContext';
+import { LocationProvider } from './contexts/LocationContext';
 import Layout from './components/Layout';
+import ErrorBoundary from './components/ErrorBoundary';
 import { motion } from 'framer-motion';
 import mediqonLogo from './assets/mediqon-logo.png';
 
@@ -25,6 +28,11 @@ const Vitals = lazy(() => import('./pages/Vitals'));
 const AddVitals = lazy(() => import('./pages/AddVitals'));
 const Consultation = lazy(() => import('./pages/Consultation'));
 const Wellness = lazy(() => import('./pages/Wellness'));
+const PredictionsHub = lazy(() => import('./pages/predictions/PredictionsHub'));
+const HeartAssessment = lazy(() => import('./pages/predictions/HeartAssessment'));
+const DiabetesAssessment = lazy(() => import('./pages/predictions/DiabetesAssessment'));
+const KidneyAssessment = lazy(() => import('./pages/predictions/KidneyAssessment'));
+const PredictionHistory = lazy(() => import('./pages/predictions/PredictionHistory'));
 
 // Optimized Page Transitions and Loading State
 const PageLoader = () => (
@@ -46,12 +54,15 @@ const PageLoader = () => (
 
 function App() {
   return (
-    <Router>
-      <ThemeProvider>
-        <AuthProvider>
-          <ToastProvider>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
+    <ErrorBoundary>
+      <Router>
+        <LocationProvider>
+          <LanguageProvider>
+            <ThemeProvider>
+            <AuthProvider>
+              <ToastProvider>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
@@ -156,12 +167,55 @@ function App() {
                   </RequireAuth>
                 } 
               />
+              <Route 
+                path="/predictions" 
+                element={
+                  <RequireAuth>
+                    <Layout><PredictionsHub /></Layout>
+                  </RequireAuth>
+                } 
+              />
+              <Route 
+                path="/predictions/heart" 
+                element={
+                  <RequireAuth>
+                    <Layout><HeartAssessment /></Layout>
+                  </RequireAuth>
+                } 
+              />
+              <Route 
+                path="/predictions/diabetes" 
+                element={
+                  <RequireAuth>
+                    <Layout><DiabetesAssessment /></Layout>
+                  </RequireAuth>
+                } 
+              />
+              <Route 
+                path="/predictions/kidney" 
+                element={
+                  <RequireAuth>
+                    <Layout><KidneyAssessment /></Layout>
+                  </RequireAuth>
+                } 
+              />
+              <Route 
+                path="/predictions/history" 
+                element={
+                  <RequireAuth>
+                    <Layout><PredictionHistory /></Layout>
+                  </RequireAuth>
+                } 
+              />
             </Routes>
           </Suspense>
         </ToastProvider>
       </AuthProvider>
       </ThemeProvider>
+      </LanguageProvider>
+      </LocationProvider>
     </Router>
+  </ErrorBoundary>
   );
 }
 

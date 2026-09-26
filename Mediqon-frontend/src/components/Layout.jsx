@@ -17,15 +17,20 @@ import {
   Library,
   HeartPulse,
   Stethoscope,
-  Zap
+  Zap,
+  Sparkles
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import mediqonLogo from '../assets/mediqon-logo.png';
+import LanguageSelector from './ui/LanguageSelector';
+import LocationSelector from './ui/LocationSelector';
 
 const NAV_ITEMS = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+  { name: 'AI Disease Predictions', path: '/predictions', icon: Sparkles },
   { name: 'Appointments', path: '/bookings', icon: CalendarDays },
   { name: 'Verified Clinicians', path: '/doctors', icon: Users },
   { name: 'Health Vitals', path: '/vitals', icon: HeartPulse },
@@ -45,6 +50,7 @@ export default function Layout({ children }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -53,7 +59,8 @@ export default function Layout({ children }) {
     navigate('/login');
   };
 
-  const currentPathName = NAV_ITEMS.concat(SECONDARY_ITEMS).find(item => item.path === location.pathname)?.name || 'Mediqon';
+  const rawPathName = NAV_ITEMS.concat(SECONDARY_ITEMS).find(item => item.path === location.pathname)?.name || 'Mediqon';
+  const currentPathName = t(rawPathName, rawPathName);
 
   return (
     <div className="flex h-screen bg-background font-sans text-foreground overflow-hidden antialiased transition-colors duration-300">
@@ -68,7 +75,7 @@ export default function Layout({ children }) {
 
         <div className="flex-1 overflow-y-auto py-6 px-4 space-y-8 no-scrollbar">
           <div className="space-y-1">
-            <p className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 mb-3">Menu</p>
+            <p className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 mb-3">{t('Menu', 'Menu')}</p>
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
@@ -83,14 +90,14 @@ export default function Layout({ children }) {
                   }`}
                 >
                   <Icon className={`h-4 w-4 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
-                  {item.name}
+                  {t(item.name, item.name)}
                 </NavLink>
               );
             })}
           </div>
 
           <div className="space-y-1">
-            <p className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 mb-3">General</p>
+            <p className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 mb-3">{t('General', 'General')}</p>
             {SECONDARY_ITEMS.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
@@ -105,7 +112,7 @@ export default function Layout({ children }) {
                   }`}
                 >
                   <Icon className={`h-4 w-4 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
-                  {item.name}
+                  {t(item.name, item.name)}
                 </NavLink>
               );
             })}
@@ -118,7 +125,7 @@ export default function Layout({ children }) {
             className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
           >
             <LogOut className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-destructive" />
-            Logout
+            {t('Logout', 'Logout')}
           </button>
         </div>
       </aside>
@@ -147,17 +154,16 @@ export default function Layout({ children }) {
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto py-6 px-4 space-y-6">
-                 {/* Similar to Desktop */}
                  <div className="space-y-1">
-                    <p className="px-3 text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-3">Menu</p>
+                    <p className="px-3 text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-3">{t('Menu', 'Menu')}</p>
                     {NAV_ITEMS.map((item) => {
-                    const Icon = item.icon;
-                    return (
+                      const Icon = item.icon;
+                      return (
                         <NavLink key={item.name} to={item.path} onClick={() => setIsMobileMenuOpen(false)}
-                        className={({isActive}) => `flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all ${isActive ? 'bg-primary/10 text-primary shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>
-                        <Icon className="h-5 w-5" /> {item.name}
+                          className={({isActive}) => `flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all ${isActive ? 'bg-primary/10 text-primary shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>
+                          <Icon className="h-5 w-5" /> {t(item.name, item.name)}
                         </NavLink>
-                    );
+                      );
                     })}
                 </div>
               </div>
@@ -166,7 +172,7 @@ export default function Layout({ children }) {
                     onClick={handleLogout}
                     className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                 >
-                    <LogOut className="h-5 w-5" /> Logout
+                    <LogOut className="h-5 w-5" /> {t('Logout', 'Logout')}
                 </button>
               </div>
             </motion.aside>
@@ -190,7 +196,7 @@ export default function Layout({ children }) {
             </h1>
           </div>
 
-          <div className="flex items-center gap-4 lg:gap-6">
+          <div className="flex items-center gap-3 lg:gap-4">
             <form 
               onSubmit={(e) => {
                 e.preventDefault();
@@ -203,19 +209,27 @@ export default function Layout({ children }) {
               <input
                 name="search"
                 type="text"
-                placeholder="Search doctors, specialties..."
+                placeholder={t('SearchPlaceholder', 'Search doctors, specialties...')}
                 className="h-10 w-64 rounded-xl border border-border bg-muted/50 pl-10 pr-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all placeholder:text-muted-foreground/60 font-medium"
               />
             </form>
 
+            {/* City Location Selector */}
+            <LocationSelector />
+
+            {/* Multi-Language Selector */}
+            <LanguageSelector />
+
+            {/* Dark / Light Theme Toggle */}
             <button 
               onClick={toggleTheme}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-all"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-all shrink-0"
+              title="Toggle Theme"
             >
               {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
             </button>
             
-            <button className="relative flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors">
+            <button className="relative flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors shrink-0">
               <Bell className="h-5 w-5" />
               <span className="absolute right-2.5 top-2.5 flex h-2 w-2 rounded-full bg-primary ring-2 ring-card"></span>
             </button>

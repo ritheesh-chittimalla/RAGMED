@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/api';
 import { motion } from 'framer-motion';
@@ -7,11 +8,14 @@ import {
   Activity, ArrowRight, Clock, MapPin, Search, ChevronRight, UserCircle, Bot, FileText
 } from 'lucide-react';
 import VoiceAssistant from '../components/VoiceAssistant';
+import BookingModal from '../components/ui/BookingModal';
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [rescheduleDoctor, setRescheduleDoctor] = useState(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -109,7 +113,7 @@ export default function Dashboard() {
                 ].map((action, i) => (
                   <button 
                     key={i}
-                    onClick={() => window.location.href = action.path}
+                    onClick={() => navigate(action.path)}
                     className="group bg-card border border-border p-5 rounded-2xl flex flex-col items-start gap-3 hover:border-primary/20 hover:bg-white/[0.02] transition-all text-left shadow-sm"
                   >
                      <div className={`h-10 w-10 rounded-xl bg-${action.color}-500/10 border border-${action.color}-500/10 flex items-center justify-center text-${action.color}-500 group-hover:scale-110 transition-transform`}>
@@ -127,7 +131,7 @@ export default function Dashboard() {
                <div className="flex items-center justify-between mb-4">
                  <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">Next Appointment</h3>
                  <button 
-                  onClick={() => window.location.href = '/bookings'}
+                  onClick={() => navigate('/bookings')}
                   className="text-sm font-medium text-primary hover:opacity-80 flex items-center gap-1"
                  >
                    View full schedule <ArrowRight className="h-4 w-4" />
@@ -163,8 +167,22 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="flex flex-col gap-3 md:w-32 shrink-0">
-                    <button className="w-full bg-primary text-primary-foreground px-4 py-2 rounded-xl text-sm font-medium hover:opacity-90 transition-all">Manage</button>
-                    <button className="w-full bg-card border border-border text-foreground px-4 py-2 rounded-xl text-sm font-medium hover:bg-muted transition-all">Reschedule</button>
+                    <button 
+                      onClick={() => navigate('/bookings')} 
+                      className="w-full bg-primary text-primary-foreground px-4 py-2 rounded-xl text-sm font-medium hover:opacity-90 transition-all shadow-sm"
+                    >
+                      Manage
+                    </button>
+                    <button 
+                      onClick={() => setRescheduleDoctor({ 
+                        name: upcomingApt.doctor, 
+                        specialty: upcomingApt.specialty, 
+                        hospital: upcomingApt.hospital || 'Parul Sevashram Hospital' 
+                      })} 
+                      className="w-full bg-card border border-border text-foreground px-4 py-2 rounded-xl text-sm font-medium hover:bg-muted transition-all"
+                    >
+                      Reschedule
+                    </button>
                   </div>
                 </div>
               ) : (
@@ -235,6 +253,17 @@ export default function Dashboard() {
 
       </div>
       
+      {/* Reschedule Booking Modal */}
+      <BookingModal
+        isOpen={Boolean(rescheduleDoctor)}
+        onClose={() => setRescheduleDoctor(null)}
+        doctor={rescheduleDoctor}
+        onBookSuccess={() => {
+          setRescheduleDoctor(null);
+          fetchData();
+        }}
+      />
+
       {/* Invisible Voice Agent */}
       <VoiceAssistant user={user} onCallEnd={fetchData} />
     </div>

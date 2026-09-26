@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
 } from 'recharts';
@@ -22,6 +23,7 @@ const METRICS = [
 ];
 
 export default function Vitals() {
+  const navigate = useNavigate();
   const [selectedMetric, setSelectedMetric] = useState(METRICS[0]);
 
   return (
@@ -33,7 +35,7 @@ export default function Vitals() {
         </div>
         <div className="flex items-center gap-2">
             <button 
-              onClick={() => window.location.href = '/vitals/add'}
+              onClick={() => navigate('/vitals/add')}
               className="bg-emerald-600 text-white px-6 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-500 transition-all shadow-sm flex items-center gap-2 active:scale-95"
             >
                 <Plus className="h-3.5 w-3.5" />

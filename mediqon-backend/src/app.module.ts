@@ -7,6 +7,7 @@ import { HospitalModule } from './modules/hospital/hospital.module';
 import { DoctorModule } from './modules/doctor/doctor.module';
 import { AppointmentModule } from './modules/appointment/appointment.module';
 import { VapiModule } from './modules/vapi/vapi.module';
+import { MlModule } from './modules/ml/ml.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { VapiModule } from './modules/vapi/vapi.module';
     DoctorModule,
     AppointmentModule,
     VapiModule,
+    MlModule,
   ],
 })
 export class AppModule {}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -18,11 +18,18 @@ import {
   HeartPulse,
   Stethoscope,
   Zap,
-  Sparkles
+  Sparkles,
+  ChevronRight,
+  User,
+  Calendar,
+  FileText,
+  ShieldCheck,
+  Clock
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useLocationContext } from '../contexts/LocationContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import mediqonLogo from '../assets/mediqon-logo.png';
 import LanguageSelector from './ui/LanguageSelector';
@@ -51,8 +58,59 @@ export default function Layout({ children }) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { t } = useLanguage();
+  const { cityDoctors } = useLocationContext();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Header Search State
+  const [globalSearchQuery, setGlobalSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const searchRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setIsSearchFocused(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const searchResults = useMemo(() => {
+    const q = globalSearchQuery.trim().toLowerCase();
+    if (!q) return { doctors: [], nav: [] };
+
+    // 1. Clinicians Search
+    const matchingDocs = (cityDoctors || []).filter(doc => 
+      (doc.name || doc.fullName || '').toLowerCase().includes(q) ||
+      (doc.specialty || '').toLowerCase().includes(q) ||
+      (doc.specialization || '').toLowerCase().includes(q) ||
+      (doc.hospital?.name || doc.hospital || '').toLowerCase().includes(q)
+    ).slice(0, 4);
+
+    // 2. Navigation Pages & Features
+    const ALL_NAV_ITEMS = [
+      { name: 'Verified Clinicians', path: '/doctors', desc: 'Browse board-certified specialists & book visits', icon: Users, category: 'Clinicians' },
+      { name: 'Health Vitals & Metrics', path: '/vitals', desc: 'Track heart rate, blood pressure, SpO2 biometrics', icon: HeartPulse, category: 'Vitals' },
+      { name: 'Medical Vault Records', path: '/records', desc: 'Access encrypted lab reports & prescriptions', icon: Library, category: 'Records' },
+      { name: 'Appointments & Queue', path: '/bookings', desc: 'Manage upcoming doctor visits & queue tokens', icon: CalendarDays, category: 'Schedule' },
+      { name: 'Heart Disease AI Predictor', path: '/predictions/heart', desc: 'Neural diagnostic scan for cardiovascular risk', icon: Activity, category: 'AI Tools' },
+      { name: 'Diabetes AI Assessment', path: '/predictions/diabetes', desc: 'ML risk screening for metabolic health', icon: Sparkles, category: 'AI Tools' },
+      { name: 'Kidney Health Assessment', path: '/predictions/kidney', desc: 'Renal function AI risk evaluator', icon: ShieldCheck, category: 'AI Tools' },
+      { name: 'Neural Health Assistant', path: '/assistant', desc: 'Voice & text AI clinical assistant', icon: Bot, category: 'Assistant' },
+      { name: 'Digital Tele-Consultation', path: '/consultation', desc: 'Live video session with attending clinician', icon: Stethoscope, category: 'Telehealth' },
+      { name: 'Health Timeline', path: '/timeline', desc: 'Chronological clinical event stream', icon: Clock, category: 'History' },
+    ];
+
+    const matchingNav = ALL_NAV_ITEMS.filter(item => 
+      item.name.toLowerCase().includes(q) ||
+      item.desc.toLowerCase().includes(q) ||
+      item.category.toLowerCase().includes(q)
+    ).slice(0, 5);
+
+    return { doctors: matchingDocs, nav: matchingNav };
+  }, [globalSearchQuery, cityDoctors]);
 
   const handleLogout = () => {
     logout();
@@ -183,7 +241,7 @@ export default function Layout({ children }) {
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden relative">
         {/* Top Navbar */}
-        <header className="flex h-16 items-center justify-between border-b border-border bg-card/80 backdrop-blur-md px-6 z-10 sticky top-0 transition-colors">
+        <header className="flex h-16 items-center justify-between border-b border-border bg-card/80 backdrop-blur-md px-6 z-30 sticky top-0 transition-colors">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setIsMobileMenuOpen(true)}
@@ -197,22 +255,146 @@ export default function Layout({ children }) {
           </div>
 
           <div className="flex items-center gap-3 lg:gap-4">
-            <form 
-              onSubmit={(e) => {
-                e.preventDefault();
-                const query = e.target.search.value;
-                if (query) navigate(`/doctors?q=${encodeURIComponent(query)}`);
-              }}
-              className="relative hidden sm:block"
-            >
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input
-                name="search"
-                type="text"
-                placeholder={t('SearchPlaceholder', 'Search doctors, specialties...')}
-                className="h-10 w-64 rounded-xl border border-border bg-muted/50 pl-10 pr-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all placeholder:text-muted-foreground/60 font-medium"
-              />
-            </form>
+            
+            {/* Global Live Interactive Search */}
+            <div className="relative hidden sm:block" ref={searchRef}>
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (globalSearchQuery.trim()) {
+                    const q = globalSearchQuery.trim();
+                    setIsSearchFocused(false);
+                    setGlobalSearchQuery('');
+                    navigate(`/doctors?q=${encodeURIComponent(q)}`);
+                  }
+                }}
+                className="relative"
+              >
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={globalSearchQuery}
+                  onChange={(e) => {
+                    setGlobalSearchQuery(e.target.value);
+                    setIsSearchFocused(true);
+                  }}
+                  onFocus={() => setIsSearchFocused(true)}
+                  placeholder={t('SearchPlaceholder', 'Search doctors, specialties...')}
+                  className="h-10 w-64 lg:w-80 rounded-xl border border-border bg-muted/50 pl-10 pr-8 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all placeholder:text-muted-foreground/60 font-medium text-foreground"
+                />
+                {globalSearchQuery && (
+                  <button 
+                    type="button"
+                    onClick={() => setGlobalSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-md hover:bg-muted transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </form>
+
+              {/* Live Search Autocomplete Popover */}
+              <AnimatePresence>
+                {isSearchFocused && globalSearchQuery.trim() !== '' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                    className="absolute right-0 mt-2 w-80 sm:w-96 bg-card border border-border rounded-2xl shadow-2xl z-50 overflow-hidden max-h-[460px] overflow-y-auto p-2 space-y-3"
+                  >
+                    {/* Clinicians Matches */}
+                    {searchResults.doctors.length > 0 && (
+                      <div>
+                        <div className="px-3 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+                          <User className="h-3 w-3 text-emerald-500" />
+                          Verified Clinicians ({searchResults.doctors.length})
+                        </div>
+                        <div className="space-y-1">
+                          {searchResults.doctors.map(doc => (
+                            <button
+                              key={doc.id}
+                              onClick={() => {
+                                setIsSearchFocused(false);
+                                setGlobalSearchQuery('');
+                                navigate(`/doctors?q=${encodeURIComponent(doc.fullName || doc.name)}`);
+                              }}
+                              className="w-full text-left p-2.5 rounded-xl hover:bg-muted flex items-center justify-between group transition-colors"
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <img 
+                                  src={doc.image || doc.photo} 
+                                  alt={doc.name} 
+                                  className="h-8 w-8 rounded-lg bg-muted border border-border object-cover shrink-0" 
+                                />
+                                <div className="min-w-0">
+                                  <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors truncate">{doc.fullName || doc.name}</p>
+                                  <p className="text-[10px] font-semibold text-muted-foreground truncate">{doc.specialty || doc.specialization}</p>
+                                </div>
+                              </div>
+                              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground shrink-0" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Feature & Navigation Matches */}
+                    {searchResults.nav.length > 0 && (
+                      <div>
+                        <div className="px-3 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+                          <Sparkles className="h-3 w-3 text-indigo-500" />
+                          Features & Platform Tools
+                        </div>
+                        <div className="space-y-1">
+                          {searchResults.nav.map(item => (
+                            <button
+                              key={item.path}
+                              onClick={() => {
+                                setIsSearchFocused(false);
+                                setGlobalSearchQuery('');
+                                navigate(item.path);
+                              }}
+                              className="w-full text-left p-2.5 rounded-xl hover:bg-muted flex items-center justify-between group transition-colors"
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center border border-primary/20 shrink-0">
+                                  <item.icon className="h-4 w-4" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors truncate">{item.name}</p>
+                                  <p className="text-[10px] font-medium text-muted-foreground truncate">{item.desc}</p>
+                                </div>
+                              </div>
+                              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground shrink-0" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {searchResults.doctors.length === 0 && searchResults.nav.length === 0 && (
+                      <div className="p-4 text-center text-xs text-muted-foreground">
+                        No direct matches found for "{globalSearchQuery}".
+                      </div>
+                    )}
+
+                    {/* Bottom Action */}
+                    <button
+                      onClick={() => {
+                        setIsSearchFocused(false);
+                        const q = globalSearchQuery.trim();
+                        setGlobalSearchQuery('');
+                        navigate(`/doctors?q=${encodeURIComponent(q)}`);
+                      }}
+                      className="w-full p-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-primary/20 transition-colors"
+                    >
+                      <Search className="h-3.5 w-3.5" />
+                      Search Clinician Registry for "{globalSearchQuery}"
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
             {/* City Location Selector */}
             <LocationSelector />

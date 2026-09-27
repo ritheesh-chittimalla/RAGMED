@@ -7,7 +7,36 @@ import { useLocationContext } from '../contexts/LocationContext';
 import { useSearchParams } from 'react-router-dom';
 import BookingModal from '../components/ui/BookingModal';
 
-const SPECIALTIES = ['All', 'Neurologist', 'Cardiologist', 'Oncologist', 'Psychiatrist', 'Radiologist', 'Gastroenterologist', 'Dermatologist', 'Orthopedic Surgeon', 'Pediatrician'];
+const SPECIALTIES = ['All', 'Cardiologist', 'Neurologist', 'Dermatologist', 'Endocrinologist', 'Oncologist', 'Nephrologist', 'Gastroenterologist', 'Psychiatrist', 'Radiologist', 'Orthopedic Surgeon', 'Pediatrician'];
+
+const matchesSpecialty = (doc, targetSpecialty) => {
+  if (!targetSpecialty || targetSpecialty === 'All') return true;
+
+  const spec = (doc.specialty || '').toLowerCase();
+  const specialization = (doc.specialization || '').toLowerCase();
+  const target = targetSpecialty.toLowerCase();
+
+  if (spec.includes(target) || specialization.includes(target) || target.includes(spec) || target.includes(specialization)) {
+    return true;
+  }
+
+  const specialtyMap = {
+    'neurologist': ['neuro', 'neurolog'],
+    'cardiologist': ['cardio', 'cardiac', 'heart'],
+    'oncologist': ['onco', 'cancer'],
+    'psychiatrist': ['psych', 'mental'],
+    'radiologist': ['radio', 'xray', 'mri', 'imaging'],
+    'gastroenterologist': ['gastro', 'gut', 'digest'],
+    'dermatologist': ['dermat', 'skin'],
+    'orthopedic surgeon': ['ortho', 'bone', 'joint'],
+    'pediatrician': ['pediat', 'child'],
+    'endocrinologist': ['endo', 'diab'],
+    'nephrologist': ['nephro', 'kidney']
+  };
+
+  const keywords = specialtyMap[target] || [target.slice(0, 4)];
+  return keywords.some(kw => spec.includes(kw) || specialization.includes(kw));
+};
 
 export default function Doctors() {
   const { user } = useAuth();
@@ -21,6 +50,13 @@ export default function Doctors() {
   const [selectedSpecialty, setSelectedSpecialty] = useState('All');
   
   const [selectedDoctor, setSelectedDoctor] = useState(null);
+
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q !== null) {
+      setSearchQuery(q);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchDoctors = async () => {
@@ -50,14 +86,19 @@ export default function Doctors() {
     fetchDoctors();
   }, [cityDoctors]);
 
-
-
   const filteredDoctors = useMemo(() => {
-    return doctors.filter(doc => 
-      (selectedSpecialty === 'All' || doc.specialty?.toLowerCase() === selectedSpecialty.toLowerCase()) &&
-      ((doc.fullName || doc.name)?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-       (doc.specialty || '').toLowerCase().includes(searchQuery.toLowerCase()))
-    );
+    return doctors.filter(doc => {
+      const matchesSpec = matchesSpecialty(doc, selectedSpecialty);
+      const query = searchQuery.trim().toLowerCase();
+      const matchesQuery = 
+        !query ||
+        (doc.fullName || doc.name || '').toLowerCase().includes(query) || 
+        (doc.specialty || '').toLowerCase().includes(query) ||
+        (doc.specialization || '').toLowerCase().includes(query) ||
+        (doc.hospital?.name || doc.hospital || '').toLowerCase().includes(query);
+
+      return matchesSpec && matchesQuery;
+    });
   }, [doctors, searchQuery, selectedSpecialty]);
 
   if (loading) {
@@ -128,8 +169,27 @@ export default function Doctors() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-          <AnimatePresence mode="popLayout">
-            {filteredDoctors.map((doc, idx) => (
+          {filteredDoctors.length === 0 ? (
+            <div className="col-span-full py-16 px-6 bg-card border border-border rounded-[2.5rem] flex flex-col items-center justify-center text-center space-y-4 shadow-sm">
+              <div className="h-16 w-16 rounded-2xl bg-muted border border-border flex items-center justify-center text-muted-foreground">
+                <Search className="h-8 w-8 text-primary" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-xl font-bold text-foreground">No Clinicians Found</h3>
+                <p className="text-sm text-muted-foreground max-w-md">
+                  No medical specialists matching "{selectedSpecialty}" were found in {currentCity?.name || 'your location'}.
+                </p>
+              </div>
+              <button
+                onClick={() => { setSelectedSpecialty('All'); setSearchQuery(''); }}
+                className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wider hover:opacity-90 transition-all shadow-md active:scale-95"
+              >
+                Reset Filters
+              </button>
+            </div>
+          ) : (
+            <AnimatePresence mode="popLayout">
+              {filteredDoctors.map((doc, idx) => (
               <motion.div
                 layout
                 key={doc.id}
@@ -227,6 +287,7 @@ export default function Doctors() {
               </motion.div>
             ))}
           </AnimatePresence>
+          )}
         </div>
       </section>
 

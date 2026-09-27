@@ -17,14 +17,45 @@ export default function BookingsDashboard({ appointments, loading, onCancel }) {
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  const isUpcoming = (a) => {
+    if (!a) return false;
+    const status = (a.status || '').toLowerCase();
+    if (status.includes('cancel') || status.includes('completed')) return false;
+
+    if (a.date) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      let aptDate;
+      if (typeof a.date === 'string') {
+        const parts = a.date.split('T')[0].split('-');
+        if (parts.length === 3) {
+          aptDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        } else {
+          aptDate = new Date(a.date);
+        }
+      } else {
+        aptDate = new Date(a.date);
+      }
+
+      if (aptDate && !isNaN(aptDate.getTime())) {
+        aptDate.setHours(23, 59, 59, 999);
+        if (aptDate < today) {
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+
   const filteredAppointments = useMemo(() => {
     if (!appointments) return [];
     let result = appointments;
     
     if (filter === 'active') {
-      result = result.filter(a => a.status !== 'cancelled' && a.status !== 'completed');
+      result = result.filter(isUpcoming);
     } else if (filter === 'cancelled') {
-        result = result.filter(a => a.status === 'cancelled');
+      result = result.filter(a => !isUpcoming(a));
     }
 
     if (searchQuery.trim() !== '') {

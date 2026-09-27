@@ -33,10 +33,40 @@ export default function Dashboard() {
   }, [fetchData]);
 
   const handleStartAssistant = () => window.dispatchEvent(new CustomEvent('trigger-vapi'));
-  const isDoctor = user?.role?.toLowerCase() === 'doctor';
+  const isUpcoming = (a) => {
+    if (!a) return false;
+    const status = (a.status || '').toLowerCase();
+    if (status.includes('cancel') || status.includes('completed')) return false;
 
-  const upcomingApt = appointments.find(a => a.status !== 'cancelled' && a.status !== 'completed');
-  const activeCount = appointments.filter(a => a.status !== 'cancelled' && a.status !== 'completed').length;
+    if (a.date) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      let aptDate;
+      if (typeof a.date === 'string') {
+        const parts = a.date.split('T')[0].split('-');
+        if (parts.length === 3) {
+          aptDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        } else {
+          aptDate = new Date(a.date);
+        }
+      } else {
+        aptDate = new Date(a.date);
+      }
+
+      if (aptDate && !isNaN(aptDate.getTime())) {
+        aptDate.setHours(23, 59, 59, 999);
+        if (aptDate < today) {
+          return false; // Date has passed
+        }
+      }
+    }
+
+    return true;
+  };
+
+  const upcomingApt = appointments.find(isUpcoming);
+  const activeCount = appointments.filter(isUpcoming).length;
 
   return (
     <div className="w-full max-w-7xl mx-auto flex flex-col gap-8 pb-10 fade-in">

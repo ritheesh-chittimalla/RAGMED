@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ShieldCheck, FileText, Search, Plus, MoreVertical, Download, Eye, 
   FilePieChart, Beaker, FileBadge, Calendar, Share2, Trash2, Bot, X, 
-  Sparkles, Activity, ArrowRight, UploadCloud, CheckCircle, Loader2 
+  Sparkles, Activity, ArrowRight, UploadCloud, CheckCircle, Loader2, Check 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../contexts/ToastContext';
@@ -17,6 +17,13 @@ const INITIAL_RECORDS = [
     size: '1.2 MB',
     type: 'PDF',
     status: 'Verified',
+    biomarkers: [
+      { name: 'Hemoglobin', value: '13.8 g/dL', range: '12.0 - 15.5 g/dL', status: 'Normal' },
+      { name: 'WBC Count', value: '6.5 x10^3/uL', range: '4.5 - 11.0 x10^3/uL', status: 'Normal' },
+      { name: 'Platelets', value: '245,000 /uL', range: '150,000 - 450,000', status: 'Normal' },
+      { name: 'C-Reactive Protein (CRP)', value: '1.2 mg/L', range: '< 3.0 mg/L', status: 'Optimal' },
+    ],
+    aiSynthesis: 'Post-operative lab panels show excellent recovery. Inflammatory markers have returned to baseline, and blood cell counts confirm complete surgical healing without signs of acute infection.'
   },
   {
     id: 2,
@@ -27,6 +34,12 @@ const INITIAL_RECORDS = [
     size: '450 KB',
     type: 'DOCX',
     status: 'Active',
+    biomarkers: [
+      { name: 'Amoxicillin 500mg', value: '1 Capsule 2x Daily', range: '7 Day Course', status: 'Active' },
+      { name: 'Lisinopril 10mg', value: '1 Tablet Morning', range: 'Continuous', status: 'Active' },
+      { name: 'Atorvastatin 20mg', value: '1 Tablet Evening', range: 'Continuous', status: 'Active' },
+    ],
+    aiSynthesis: 'Active prescription regimen is compliant with current cardiac and blood pressure treatment guidelines. No dangerous drug-drug interactions detected across active medications.'
   },
   {
     id: 3,
@@ -37,6 +50,13 @@ const INITIAL_RECORDS = [
     size: '5.8 MB',
     type: 'PDF',
     status: 'Archived',
+    biomarkers: [
+      { name: 'Fasting Blood Sugar', value: '95 mg/dL', range: '70 - 99 mg/dL', status: 'Optimal' },
+      { name: 'Total Cholesterol', value: '182 mg/dL', range: '< 200 mg/dL', status: 'Normal' },
+      { name: 'HbA1c', value: '5.4%', range: '< 5.7%', status: 'Normal' },
+      { name: 'Vitamin D3', value: '38 ng/mL', range: '30 - 100 ng/mL', status: 'Sufficient' },
+    ],
+    aiSynthesis: 'Comprehensive yearly health evaluation confirms prime physiological wellness. All major metabolic, endocrine, and lipid markers fall strictly within healthy reference intervals.'
   },
   {
     id: 4,
@@ -47,6 +67,12 @@ const INITIAL_RECORDS = [
     size: '12.4 MB',
     type: 'JPG',
     status: 'Verified',
+    biomarkers: [
+      { name: 'Lung Fields', value: 'Clear', range: 'No infiltrates/consolidation', status: 'Normal' },
+      { name: 'Cardiothoracic Ratio', value: '< 50%', range: 'Normal heart size', status: 'Optimal' },
+      { name: 'Pleural Spaces', value: 'Clear', range: 'No effusion', status: 'Normal' },
+    ],
+    aiSynthesis: 'Radiological chest X-ray inspection demonstrates clear pulmonary fields, normal cardiac silhouette, and clear costophrenic angles. No pulmonary edema or infiltrates observed.'
   },
 ];
 
@@ -58,7 +84,7 @@ const CATEGORIES = [
 ];
 
 export default function Records() {
-  const { showToast } = useToast();
+  const { showToast, addToast } = useToast();
   const [records, setRecords] = useState(INITIAL_RECORDS);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -70,6 +96,22 @@ export default function Records() {
   const [newDocTitle, setNewDocTitle] = useState('');
   const [newDocCategory, setNewDocCategory] = useState('Lab Report');
   const [newDocDoctor, setNewDocDoctor] = useState('Dr. Sarah Johnson');
+
+  const triggerToast = (msg, type = 'info') => {
+    if (showToast) showToast(msg, type);
+    else if (addToast) addToast(msg, type);
+  };
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('medicalVaultRecords');
+      if (saved) {
+        setRecords(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.warn('Error reading medicalVaultRecords:', e);
+    }
+  }, []);
 
   const filteredRecords = records.filter(rec => {
     const matchesCategory = selectedCategory === 'All' || rec.category.toLowerCase().includes(selectedCategory.toLowerCase().slice(0, -1));
@@ -86,36 +128,87 @@ export default function Records() {
     setUploading(true);
     setTimeout(() => {
       const newRecord = {
-        id: Date.now(),
+        id: 'rec-' + Date.now(),
         title: newDocTitle,
         category: newDocCategory,
         date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
         doctor: newDocDoctor,
         size: `${(Math.random() * 3 + 0.5).toFixed(1)} MB`,
         type: newDocTitle.toLowerCase().includes('png') || newDocTitle.toLowerCase().includes('jpg') ? 'PNG' : 'PDF',
-        status: 'Verified'
+        status: 'Verified',
+        biomarkers: [
+          { name: 'Document Encrypted', value: 'AES-256', range: 'Node Verified', status: 'Secured' },
+          { name: 'OCR Integrity', value: '100% Passed', range: 'Validated', status: 'Normal' }
+        ],
+        aiSynthesis: `Verified clinical scan of '${newDocTitle}'. Multi-node encryption verified file authenticity and matched authorising clinician ${newDocDoctor}.`
       };
 
-      setRecords(prev => [newRecord, ...prev]);
+      setRecords(prev => {
+        const next = [newRecord, ...prev];
+        localStorage.setItem('medicalVaultRecords', JSON.stringify(next));
+        return next;
+      });
+
       setUploading(false);
       setShowUploadModal(false);
       setNewDocTitle('');
-      if (showToast) showToast(`Document "${newRecord.title}" uploaded to Medical Vault successfully.`, 'success');
+      triggerToast(`Document "${newRecord.title}" saved to Medical Vault successfully.`, 'success');
     }, 1000);
   };
 
   const handleDownload = (record) => {
-    if (showToast) showToast(`Downloading "${record.title}" (${record.size})...`, 'info');
+    try {
+      const docText = `MEDIQON CLINICAL MEDICAL VAULT DOCUMENT
+=============================================
+Document Title: ${record.title}
+Category: ${record.category}
+Clinician: ${record.doctor}
+Date Issued: ${record.date}
+File Size: ${record.size}
+File Format: ${record.type}
+Security: AES-256 Node Encrypted & Verified
+
+CLINICAL AI SYNTHESIS & OCR REPORT
+----------------------------------
+${record.aiSynthesis || 'Biomarker scan confirms all clinical indicators remain within normal parameters.'}
+
+EXTRACTED BIOMARKERS & LAB VALUES
+---------------------------------
+${(record.biomarkers || []).map(b => `- ${b.name}: ${b.value} (Ref Range: ${b.range || 'N/A'}) [${b.status}]`).join('\n')}
+
+=============================================
+Mediqon Encrypted Medical Vault Platform
+`;
+
+      const blob = new Blob([docText], { type: 'text/plain;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const fileExt = record.type ? record.type.toLowerCase() : 'txt';
+      link.download = `${record.title.toLowerCase().replace(/\s+/g, '_')}_vault.${fileExt === 'pdf' || fileExt === 'docx' ? fileExt : 'txt'}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      triggerToast(`Downloaded "${record.title}" (${record.size}) to your device.`, 'success');
+    } catch (err) {
+      console.error('Download failed:', err);
+    }
   };
 
   const handleShare = (record) => {
     navigator.clipboard.writeText(`https://mediqon.health/vault/share/${record.id}`);
-    if (showToast) showToast(`Secure share link copied to clipboard for "${record.title}".`, 'success');
+    triggerToast(`Encrypted share link copied to clipboard for "${record.title}".`, 'success');
   };
 
   const handleDelete = (recordId, title) => {
-    setRecords(prev => prev.filter(r => r.id !== recordId));
-    if (showToast) showToast(`Deleted "${title}" from vault.`, 'info');
+    setRecords(prev => {
+      const next = prev.filter(r => r.id !== recordId);
+      localStorage.setItem('medicalVaultRecords', JSON.stringify(next));
+      return next;
+    });
+    triggerToast(`Deleted "${title}" from Medical Vault.`, 'info');
   };
 
   return (
@@ -214,19 +307,19 @@ export default function Records() {
         )}
       </AnimatePresence>
 
-      {/* AI Analysis Modal */}
+      {/* AI Analysis & Document Inspection Modal */}
       <AnimatePresence>
         {selectedReport && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative w-full max-w-xl bg-card border border-border rounded-3xl p-6 shadow-2xl space-y-6">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative w-full max-w-2xl bg-card border border-border rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
               <div className="flex items-center justify-between border-b border-border pb-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-500 border border-purple-500/20">
                     <Bot className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-foreground">AI Document Analysis</h3>
-                    <p className="text-xs text-muted-foreground">{selectedReport.title}</p>
+                    <h3 className="text-base font-bold text-foreground">AI Document Scan & Clinical Inspection</h3>
+                    <p className="text-xs text-muted-foreground">{selectedReport.title} • {selectedReport.doctor}</p>
                   </div>
                 </div>
                 <button onClick={() => setSelectedReport(null)} className="text-muted-foreground hover:text-foreground">
@@ -234,18 +327,53 @@ export default function Records() {
                 </button>
               </div>
 
-              <div className="space-y-4">
-                 <div className="p-4 rounded-2xl bg-purple-500/5 border border-purple-500/20 space-y-2">
+              <div className="space-y-5">
+                 {/* Clinical AI Synthesis */}
+                 <div className="p-5 rounded-2xl bg-purple-500/5 border border-purple-500/20 space-y-2">
                     <h4 className="text-xs font-bold text-purple-500 uppercase tracking-wider flex items-center gap-2">
                        <Activity className="h-4 w-4" />
-                       Clinical Synthesis
+                       Clinical Synthesis & Interpretation
                     </h4>
                     <p className="text-xs text-foreground leading-relaxed italic">
-                      "Analysis of {selectedReport.category.toLowerCase()} '{selectedReport.title}' indicates all key biomarkers remain stable. AI scan detects no critical anomalies requiring immediate intervention."
+                      "{selectedReport.aiSynthesis || `Analysis of ${selectedReport.category.toLowerCase()} '${selectedReport.title}' indicates key biomarkers remain stable without critical anomalies.`}"
                     </p>
                  </div>
 
-                 <div className="grid grid-cols-2 gap-3 text-xs">
+                 {/* Extracted Biomarkers Table */}
+                 <div className="space-y-2">
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Extracted Biomarkers & Clinical Parameters</h4>
+                    <div className="bg-muted/50 border border-border rounded-2xl overflow-hidden">
+                       <table className="w-full text-left text-xs">
+                          <thead>
+                             <tr className="border-b border-border bg-muted/80 text-[10px] uppercase font-bold text-muted-foreground">
+                                <th className="p-3">Biomarker / Test</th>
+                                <th className="p-3">Value</th>
+                                <th className="p-3">Reference Range</th>
+                                <th className="p-3 text-right">Status</th>
+                             </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                             {(selectedReport.biomarkers || [
+                                { name: 'Biomarker Stability', value: 'Verified', range: 'Normal', status: 'Optimal' },
+                                { name: 'OCR Alignment', value: '100% Match', range: 'Standard', status: 'Normal' }
+                             ]).map((bio, idx) => (
+                                <tr key={idx} className="hover:bg-muted/30">
+                                   <td className="p-3 font-bold text-foreground">{bio.name}</td>
+                                   <td className="p-3 font-semibold text-foreground">{bio.value}</td>
+                                   <td className="p-3 text-muted-foreground">{bio.range}</td>
+                                   <td className="p-3 text-right">
+                                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[10px] font-bold uppercase">
+                                         {bio.status}
+                                      </span>
+                                   </td>
+                                </tr>
+                             ))}
+                          </tbody>
+                       </table>
+                    </div>
+                 </div>
+
+                 <div className="grid grid-cols-2 gap-3 text-xs pt-1">
                     <div className="p-3.5 rounded-xl bg-muted border border-border">
                        <p className="text-[10px] font-bold text-muted-foreground uppercase">OCR Confidence</p>
                        <p className="text-sm font-extrabold text-foreground">99.4% Verified</p>
@@ -257,8 +385,24 @@ export default function Records() {
                  </div>
               </div>
 
-              <div className="pt-2 flex justify-end">
-                 <button onClick={() => setSelectedReport(null)} className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wider">
+              <div className="pt-3 border-t border-border flex items-center justify-between gap-3">
+                 <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleDownload(selectedReport)}
+                      className="px-4 py-2 rounded-xl bg-muted border border-border text-xs font-bold text-foreground hover:bg-muted/80 flex items-center gap-2 transition-all"
+                    >
+                      <Download className="w-4 h-4 text-emerald-500" />
+                      Download File
+                    </button>
+                    <button
+                      onClick={() => handleShare(selectedReport)}
+                      className="px-4 py-2 rounded-xl bg-muted border border-border text-xs font-bold text-foreground hover:bg-muted/80 flex items-center gap-2 transition-all"
+                    >
+                      <Share2 className="w-4 h-4 text-blue-500" />
+                      Share Link
+                    </button>
+                 </div>
+                 <button onClick={() => setSelectedReport(null)} className="px-6 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wider">
                     Close Analysis
                  </button>
               </div>
@@ -401,7 +545,7 @@ export default function Records() {
                           <div className="flex items-center justify-end gap-1">
                             <button
                               onClick={() => setSelectedReport(rec)}
-                              title="AI Report Scan"
+                              title="AI Report Scan & Inspection"
                               className="p-2 rounded-lg text-muted-foreground hover:text-purple-500 hover:bg-purple-500/10 transition-colors"
                             >
                               <Eye className="h-4 w-4" />

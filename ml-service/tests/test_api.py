@@ -1,7 +1,3 @@
-"""
-Unit and Integration tests for FastAPI ML Prediction endpoints.
-"""
-
 from fastapi.testclient import TestClient
 from app.main import app
 
@@ -99,6 +95,5 @@ def test_predict_kidney_endpoint():
 
 
 def test_invalid_input_validation():
-    # Sending missing fields should trigger 422 Unprocessable Entity
     response = client.post("/predict/heart", json={"age": 55})
     assert response.status_code == 422

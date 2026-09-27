@@ -21,15 +21,28 @@ export default function AddVitals() {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Save biometrics entry into local storage for persistent clinical timeline & export
+    try {
+      const existingLogs = JSON.parse(localStorage.getItem('healthVitalsLog') || '[]');
+      const newEntry = {
+        id: 'vital-' + Date.now(),
+        timestamp: new Date().toISOString(),
+        displayDate: new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
+        metrics: { ...formData }
+      };
+      localStorage.setItem('healthVitalsLog', JSON.stringify([newEntry, ...existingLogs]));
+    } catch (err) {
+      console.warn('Could not save vital log to localStorage:', err);
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     setIsSubmitting(false);
     setIsSuccess(true);
     
     setTimeout(() => {
       navigate('/vitals');
-    }, 2000);
+    }, 1500);
   };
 
   const handleInputChange = (id, value) => {
